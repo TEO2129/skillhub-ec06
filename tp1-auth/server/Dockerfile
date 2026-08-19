@@ -1,25 +1,27 @@
-# ─────────────────────────────────────────────
-# Stage 1 : build avec Maven
-# ─────────────────────────────────────────────
-FROM maven:3.9-eclipse-temurin-17 AS builder
+FROM openjdk:17-jdk-slim
+
+# Installer Maven
+RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
+# Copier le code source
 COPY pom.xml .
-RUN mvn dependency:go-offline -B
-
 COPY src ./src
-RUN mvn clean package -DskipTests -B
 
-# ─────────────────────────────────────────────
-# Stage 2 : runtime leger
-# ─────────────────────────────────────────────
-FROM eclipse-temurin:17-jre-alpine AS runtime
+# Compiler et empaqueter
+RUN mvn clean package -DskipTests
 
-WORKDIR /app
+# Copier le jar
+FROM openjdk:17-jdk-slim
+COPY --from=0 /app/target/auth-server-1.0.0.jar app.jar
 
-COPY --from=builder /app/target/auth-server-1.0.0.jar app.jar
-
+# Port exposé
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Variables d'environnement requises
+ENV APP_MASTER_KEY=""
+ENV JWT_SECRET="SkillHubMasterKey2026!SecretJWTKey256BitsMinimum"
+
+# Lancer l'application
+ENTRYPOINT ["java", "-jar", "/app.jar"]
