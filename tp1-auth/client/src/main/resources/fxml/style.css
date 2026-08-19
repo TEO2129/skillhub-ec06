@@ -1,0 +1,191 @@
+.root {
+    -fx-font-family: "Segoe UI", Arial, sans-serif;
+    -fx-background-color: #1a1a2e;
+}
+
+.root-container {
+    -fx-background-color: #1a1a2e;
+}
+
+/* ─── Header ─── */
+.header {
+    -fx-background-color: #16213e;
+    -fx-border-color: #e74c3c;
+    -fx-border-width: 0 0 2 0;
+}
+
+.title {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ecf0f1;
+}
+
+.subtitle {
+    -fx-font-size: 13px;
+    -fx-text-fill: #bdc3c7;
+}
+
+.warning-badge {
+    -fx-font-size: 11px;
+    -fx-text-fill: #e74c3c;
+    -fx-font-weight: bold;
+}
+
+/* ─── Tabs ─── */
+.tab-pane {
+    -fx-background-color: #1a1a2e;
+}
+
+.tab-pane .tab-header-area .tab-header-background {
+    -fx-background-color: #16213e;
+}
+
+.tab-pane .tab {
+    -fx-background-color: #0f3460;
+    -fx-padding: 8 16;
+}
+
+.tab-pane .tab:selected {
+    -fx-background-color: #e74c3c;
+}
+
+.tab .tab-label {
+    -fx-text-fill: #ecf0f1;
+    -fx-font-size: 13px;
+}
+
+.tab-content {
+    -fx-background-color: #1a1a2e;
+}
+
+/* ─── Labels ─── */
+.field-label {
+    -fx-text-fill: #bdc3c7;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.hint-text {
+    -fx-text-fill: #7f8c8d;
+    -fx-font-size: 12px;
+    -fx-font-style: italic;
+}
+
+.danger-hint {
+    -fx-text-fill: #e67e22;
+    -fx-font-size: 11px;
+    -fx-font-style: italic;
+}
+
+.status-label {
+    -fx-font-size: 13px;
+    -fx-wrap-text: true;
+}
+
+/* ─── Inputs ─── */
+.text-field {
+    -fx-background-color: #0f3460;
+    -fx-text-fill: #ecf0f1;
+    -fx-prompt-text-fill: #7f8c8d;
+    -fx-border-color: #2980b9;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 8 12;
+    -fx-font-size: 14px;
+}
+
+.text-field:focused {
+    -fx-border-color: #3498db;
+    -fx-background-color: #1a4a7a;
+}
+
+/* ─── Buttons ─── */
+.btn-primary {
+    -fx-background-color: #2980b9;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 20;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+
+.btn-primary:hover {
+    -fx-background-color: #3498db;
+}
+
+.btn-primary:disabled {
+    -fx-opacity: 0.5;
+}
+
+.btn-secondary {
+    -fx-background-color: #27ae60;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 20;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+
+.btn-secondary:hover {
+    -fx-background-color: #2ecc71;
+}
+
+.btn-danger {
+    -fx-background-color: #c0392b;
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 8 16;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+
+.btn-danger:hover {
+    -fx-background-color: #e74c3c;
+}
+
+/* ─── Profile card ─── */
+.profile-card {
+    -fx-background-color: #0f3460;
+    -fx-padding: 16;
+    -fx-background-radius: 8;
+    -fx-border-color: #27ae60;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+}
+
+.connected-badge {
+    -fx-text-fill: #2ecc71;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+.profile-info {
+    -fx-text-fill: #ecf0f1;
+    -fx-font-size: 13px;
+}
+
+.profile-token {
+    -fx-text-fill: #f39c12;
+    -fx-font-size: 12px;
+    -fx-font-family: "Courier New", monospace;
+}
+
+/* ─── Footer ─── */
+.footer {
+    -fx-background-color: #16213e;
+    -fx-border-color: #2c3e50;
+    -fx-border-width: 1 0 0 0;
+}
+
+.footer-text {
+    -fx-text-fill: #7f8c8d;
+    -fx-font-size: 11px;
+}
+
+/* ─── Separator ─── */
+.separator .line {
+    -fx-border-color: #2c3e50;
+}
