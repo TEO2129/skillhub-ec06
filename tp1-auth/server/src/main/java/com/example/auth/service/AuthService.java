@@ -1,99 +1,93 @@
 package com.example.auth.service;
 
+import com.example.auth.crypto.AesGcmUtil;
+import com.example.auth.dto.LoginHmacRequest;
+import com.example.auth.entity.Nonce;
 import com.example.auth.entity.User;
 import com.example.auth.exception.AuthenticationFailedException;
 import com.example.auth.exception.InvalidInputException;
 import com.example.auth.exception.ResourceConflictException;
+import com.example.auth.repository.NonceRepository;
 import com.example.auth.repository.UserRepository;
+import com.example.auth.security.JwtUtil;
+import com.example.auth.validator.PasswordPolicyValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.regex.Pattern;
 
 /**
  * ============================================================
- * SERVICE PRINCIPAL D'AUTHENTIFICATION - TP1
+ * SERVICE PRINCIPAL D'AUTHENTIFICATION - TP4
  * ============================================================
  *
- * ⚠️ ATTENTION : Cette implémentation est VOLONTAIREMENT DANGEREUSE
- * et ne doit JAMAIS être utilisée en production.
- *
- * Risques identifiés en TP1 :
- * 1. ✅ Mots de passe stockés en clair en base
- * 2. ✅ Pas de politique de mot de passe forte (seulement 4 caractères)
- * 3. ✅ Pas de protection contre les attaques par force brute
- * 4. ✅ Token de session simple (non signé, non sécurisé)
- * 5. ✅ Absence de TLS/HTTPS configuré
+ * TP1 : Authentification dangereuse (mots de passe en clair)
+ * TP2 : BCrypt + politique stricte + anti-brute force
+ * TP3 : HMAC + nonce + timestamp + JWT
+ * TP4 : Master Key AES GCM + chiffrement des mots de passe
  *
  * @see org.springframework.stereotype.Service
  */
 @Service
 public class AuthService {
 
-    // Logger pour tracer les événements (exigé par le sujet TP1)
     private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
 
+    // TP2 : Anti-brute force
+    private static final int MAX_FAILED_ATTEMPTS = 5;
+    private static final int LOCK_DURATION_MINUTES = 2;
+
     private final UserRepository userRepository;
+    private final NonceRepository nonceRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final MasterKeyConfig masterKeyConfig;
+    private final JwtUtil jwtUtil;
 
     /**
-     * Constructeur avec injection de dépendance.
-     * Spring injecte automatiquement le repository.
-     *
-     * @param userRepository le repository des utilisateurs
+     * Constructeur TP4 avec toutes les dépendances.
      */
-    public AuthService(UserRepository userRepository) {
+    public AuthService(UserRepository userRepository,
+                       NonceRepository nonceRepository,
+                       PasswordEncoder passwordEncoder,
+                       MasterKeyConfig masterKeyConfig,
+                       JwtUtil jwtUtil) {
         this.userRepository = userRepository;
+        this.nonceRepository = nonceRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.masterKeyConfig = masterKeyConfig;
+        this.jwtUtil = jwtUtil;
     }
 
     // =========================================================
-    // TP1 : INSCRIPTION (mot de passe en clair)
+    // TP4 : INSCRIPTION (BCrypt + Master Key AES GCM)
     // =========================================================
 
-    /**
-     * Inscrit un nouvel utilisateur.
-     *
-     * ⚠️ TP1 : Validation minimale :
-     * - Email obligatoire et format valide
-     * - Mot de passe : minimum 4 caractères (UNIQUEMENT)
-     * - Email unique
-     * - Mot de passe stocké en CLAIR
-     *
-     * @param email    l'email de l'utilisateur
-     * @param password le mot de passe (stocké en clair)
-     * @return l'utilisateur créé
-     * @throws InvalidInputException        si l'email ou le mot de passe est invalide
-     * @throws ResourceConflictException    si l'email existe déjà
-     */
+    @Transactional
     public User register(String email, String password) {
 
         // =========================================================
         // 1. Validation de l'email
         // =========================================================
 
-        // Vérifier que l'email n'est pas vide
         if (email == null || email.trim().isEmpty()) {
-            logger.warn("Tentative d'inscription avec email vide");  // Log exigé par le sujet
+            logger.warn("Tentative d'inscription avec email vide");
             throw new InvalidInputException("L'email est obligatoire.");
         }
 
-        // Vérifier le format de l'email (ex: test@example.com)
         if (!isValidEmail(email)) {
             logger.warn("Tentative d'inscription avec email invalide : {}", email);
             throw new InvalidInputException("Format d'email invalide.");
         }
 
         // =========================================================
-        // 2. Validation du mot de passe (TP1 : min 4 caractères)
+        // 2. Validation du mot de passe (politique stricte TP2)
         // =========================================================
 
-        // ⚠️ TP1 : Seulement 4 caractères minimum (VOLONTAIREMENT FAIBLE)
-        if (password == null || password.length() < 4) {
-            logger.warn("Tentative d'inscription avec mot de passe trop court pour : {}", email);
-            throw new InvalidInputException("Le mot de passe doit contenir au moins 4 caractères.");
-        }
-        // ❌ TP1 : Pas de vérification de majuscules, chiffres, caractères spéciaux
-        // ❌ TP1 : Pas de vérification de longueur > 4
+        PasswordPolicyValidator.validate(password);
 
         // =========================================================
         // 3. Vérifier que l'email est unique
@@ -105,37 +99,36 @@ public class AuthService {
         }
 
         // =========================================================
-        // 4. Création de l'utilisateur (stockage en CLAIR)
+        // 4. TP4 : Chiffrer le mot de passe avec Master Key AES GCM
         // =========================================================
 
-        // ⚠️ TP1 : Mot de passe en CLAIR (VOLONTAIREMENT DANGEREUX)
-        User user = new User(email, password);
-        User saved = userRepository.save(user);
+        String encryptedPassword = encryptPassword(password);
 
-        // Log d'inscription réussie (exigé par le sujet)
-        logger.info("Inscription réussie pour : {}", email);
+        // =========================================================
+        // 5. Hash BCrypt pour compatibilité TP2/TP3
+        // =========================================================
+
+        String hashedPassword = passwordEncoder.encode(password);
+
+        // =========================================================
+        // 6. Création de l'utilisateur
+        // =========================================================
+
+        User user = new User(email, hashedPassword);
+        user.setPasswordEncrypted(encryptedPassword);
+        user.setFailedAttempts(0);
+        user.setLockUntil(null);
+
+        User saved = userRepository.save(user);
+        logger.info("Inscription réussie pour : {} (chiffré avec Master Key)", email);
         return saved;
     }
 
     // =========================================================
-    // TP1 : LOGIN (comparaison en clair)
+    // TP2 : LOGIN (BCrypt + anti-brute force)
     // =========================================================
 
-    /**
-     * Connecte un utilisateur et retourne un token de session.
-     *
-     * ⚠️ TP1 :
-     * - Comparaison du mot de passe en CLAIR
-     * - Pas de BCrypt
-     * - Pas de verrouillage après échecs
-     * - Token simple (non signé)
-     *
-     * @param email    l'email de l'utilisateur
-     * @param password le mot de passe (comparé en clair)
-     * @return un token de session simple
-     * @throws InvalidInputException          si l'email ou le mot de passe est vide
-     * @throws AuthenticationFailedException  si l'email est inconnu ou le mot de passe incorrect
-     */
+    @Transactional
     public String login(String email, String password) {
 
         // =========================================================
@@ -150,89 +143,215 @@ public class AuthService {
         }
 
         // =========================================================
-        // 2. Recherche de l'utilisateur par email
+        // 2. Recherche de l'utilisateur
         // =========================================================
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> {
                     logger.warn("Tentative de connexion avec email inconnu : {}", email);
-                    // ⚠️ TP2 : Même message pour email inconnu et mauvais mot de passe
-                    // (non-divulgation des erreurs)
                     return new AuthenticationFailedException("Identifiants invalides.");
                 });
 
         // =========================================================
-        // 3. Vérification du mot de passe (COMPARAISON EN CLAIR)
+        // 3. Vérification du verrouillage (anti-brute force)
         // =========================================================
 
-        // ⚠️ TP1 : Comparaison en CLAIR (VOLONTAIREMENT DANGEREUX)
-        // Normalement on utilise BCrypt.matches() pour comparer les hash
-        if (!user.getPassword().equals(password)) {
+        if (user.isLocked()) {
+            logger.warn("Tentative de connexion sur compte verrouillé : {}", email);
+            throw new AuthenticationFailedException(
+                    "Compte temporairement verrouillé. Réessayez dans " + LOCK_DURATION_MINUTES + " minutes."
+            );
+        }
+
+        // =========================================================
+        // 4. Vérification du mot de passe avec BCrypt
+        // =========================================================
+
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            user.setFailedAttempts(user.getFailedAttempts() + 1);
+            if (user.getFailedAttempts() >= MAX_FAILED_ATTEMPTS) {
+                user.setLockUntil(LocalDateTime.now().plusMinutes(LOCK_DURATION_MINUTES));
+                logger.warn("Compte verrouillé après {} échecs pour : {}", MAX_FAILED_ATTEMPTS, email);
+            }
+            userRepository.save(user);
             logger.warn("Connexion échouée - mot de passe incorrect pour : {}", email);
-            // ⚠️ TP1 : Pas de compteur de tentatives
-            // ⚠️ TP1 : Pas de verrouillage après 5 échecs
             throw new AuthenticationFailedException("Identifiants invalides.");
         }
 
         // =========================================================
-        // 4. Génération du token de session (TP1 : SIMPLE)
+        // 5. Connexion réussie - Réinitialiser les tentatives
         // =========================================================
 
-        // ⚠️ TP1 : Token SIMPLE (non signé, non sécurisé)
-        // Format : session-[timestamp]-[userId]
-        String token = "session-" + System.currentTimeMillis() + "-" + user.getId();
+        user.setFailedAttempts(0);
+        user.setLockUntil(null);
+        userRepository.save(user);
 
-        // Stocker le token en base (pour la route /api/me)
+        // =========================================================
+        // 6. Génération du token (TP3 : JWT)
+        // =========================================================
+
+        String token = jwtUtil.generateToken(email);
         user.setSessionToken(token);
         userRepository.save(user);
 
-        // Log de connexion réussie
         logger.info("Connexion réussie pour : {}", email);
         return token;
     }
 
     // =========================================================
-    // TP1 : ROUTE PROTÉGÉE /api/me (token simple)
+    // TP3 : LOGIN HMAC (Master Key TP4)
     // =========================================================
 
-    /**
-     * Récupère les informations de l'utilisateur authentifié.
-     *
-     * ⚠️ TP1 :
-     * - Vérification par token stocké en base
-     * - Pas de JWT, pas de signature
-     * - Token non sécurisé
-     *
-     * @param token le token de session (header X-Session-Token)
-     * @return l'utilisateur correspondant
-     * @throws AuthenticationFailedException si le token est manquant, invalide ou expiré
-     */
+    @Transactional
+    public String loginHmac(LoginHmacRequest request) {
+
+        String email = request.getEmail();
+        String nonce = request.getNonce();
+        long timestamp = request.getTimestamp();
+        String hmac = request.getHmac();
+
+        // =========================================================
+        // 1. Vérifier email existe
+        // =========================================================
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> {
+                    logger.warn("Tentative de connexion HMAC avec email inconnu : {}", email);
+                    return new AuthenticationFailedException("Identifiants invalides.");
+                });
+
+        // =========================================================
+        // 2. Vérifier le verrouillage (anti-brute force)
+        // =========================================================
+
+        if (user.isLocked()) {
+            logger.warn("Tentative de connexion HMAC sur compte verrouillé : {}", email);
+            throw new AuthenticationFailedException(
+                    "Compte temporairement verrouillé. Réessayez dans " + LOCK_DURATION_MINUTES + " minutes."
+            );
+        }
+
+        // =========================================================
+        // 3. Vérifier timestamp (±60 secondes)
+        // =========================================================
+
+        long now = System.currentTimeMillis();
+        if (Math.abs(now - timestamp) > 60000) {
+            logger.warn("Timestamp invalide pour : {}, écart : {} ms", email, Math.abs(now - timestamp));
+            throw new AuthenticationFailedException("Timestamp invalide.");
+        }
+
+        // =========================================================
+        // 4. Vérifier anti-rejeu (nonce pas déjà utilisé)
+        // =========================================================
+
+        if (nonceRepository.findByNonce(nonce).isPresent()) {
+            logger.warn("Nonce déjà utilisé pour : {}", email);
+            throw new AuthenticationFailedException("Nonce déjà utilisé.");
+        }
+
+        // =========================================================
+        // 5. TP4 : Récupérer et déchiffrer le mot de passe
+        // =========================================================
+
+        String passwordPlain = decryptPassword(user.getPasswordEncrypted());
+
+        // =========================================================
+        // 6. Recalculer HMAC
+        // =========================================================
+
+        String message = email + ":" + nonce + ":" + timestamp;
+        String expectedHmac = HmacService.calculateHmac(message, passwordPlain);
+
+        // =========================================================
+        // 7. Comparer en temps constant
+        // =========================================================
+
+        if (!HmacService.constantTimeEquals(hmac, expectedHmac)) {
+            logger.warn("HMAC invalide pour : {}", email);
+            // Incrémenter les tentatives échouées
+            user.setFailedAttempts(user.getFailedAttempts() + 1);
+            if (user.getFailedAttempts() >= MAX_FAILED_ATTEMPTS) {
+                user.setLockUntil(LocalDateTime.now().plusMinutes(LOCK_DURATION_MINUTES));
+                logger.warn("Compte verrouillé après {} échecs HMAC pour : {}", MAX_FAILED_ATTEMPTS, email);
+            }
+            userRepository.save(user);
+            throw new AuthenticationFailedException("Signature invalide.");
+        }
+
+        // =========================================================
+        // 8. Réinitialiser les tentatives
+        // =========================================================
+
+        user.setFailedAttempts(0);
+        user.setLockUntil(null);
+        userRepository.save(user);
+
+        // =========================================================
+        // 9. Marquer nonce comme consommé
+        // =========================================================
+
+        Nonce nonceEntity = new Nonce(user.getId(), nonce, LocalDateTime.now().plusMinutes(2));
+        nonceRepository.save(nonceEntity);
+
+        // =========================================================
+        // 10. Générer JWT
+        // =========================================================
+
+        String token = jwtUtil.generateToken(email);
+        logger.info("Connexion HMAC réussie pour : {}", email);
+        return token;
+    }
+
+    // =========================================================
+    // ROUTE PROTÉGÉE /api/me
+    // =========================================================
+
     public User getMe(String token) {
 
-        // Vérifier que le token est présent
         if (token == null || token.isEmpty()) {
             throw new AuthenticationFailedException("Token manquant.");
         }
 
-        // ⚠️ TP1 : Recherche par token stocké en base (non sécurisé)
-        // Normalement on valide la signature du JWT
-        return userRepository.findBySessionToken(token)
-                .orElseThrow(() -> new AuthenticationFailedException("Token invalide ou expiré."));
+        // TP3 : Validation JWT
+        if (!jwtUtil.validateToken(token)) {
+            throw new AuthenticationFailedException("Token invalide ou expiré.");
+        }
+
+        String email = jwtUtil.extractEmail(token);
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new AuthenticationFailedException("Utilisateur non trouvé."));
+    }
+
+    // =========================================================
+    // TP4 : MÉTHODES DE CHIFFREMENT AVEC MASTER KEY
+    // =========================================================
+
+    /**
+     * Chiffre un mot de passe avec AES GCM.
+     *
+     * @param plainPassword le mot de passe en clair
+     * @return le mot de passe chiffré (format: "v1:Base64(iv):Base64(ciphertext)")
+     */
+    private String encryptPassword(String plainPassword) {
+        return AesGcmUtil.encrypt(plainPassword, masterKeyConfig.getMasterKey());
+    }
+
+    /**
+     * Déchiffre un mot de passe avec AES GCM.
+     *
+     * @param encryptedPassword le mot de passe chiffré
+     * @return le mot de passe en clair
+     */
+    private String decryptPassword(String encryptedPassword) {
+        return AesGcmUtil.decrypt(encryptedPassword, masterKeyConfig.getMasterKey());
     }
 
     // =========================================================
     // MÉTHODES UTILITAIRES
     // =========================================================
 
-    /**
-     * Valide le format d'un email.
-     *
-     * @param email l'email à valider
-     * @return true si le format est valide, false sinon
-     */
     private boolean isValidEmail(String email) {
-        // Regex simple pour valider le format email
-        // Exemple : test@example.com
         String emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
         return Pattern.compile(emailRegex).matcher(email).matches();
     }
