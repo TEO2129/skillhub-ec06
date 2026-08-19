@@ -147,4 +147,19 @@ public class AuthController {
                 "createdAt", user.getCreatedAt().toString()
         ));
     }
+    // =========================================================
+    // ENDPOINT : HMAC
+    // =========================================================
+
+    @PostMapping("/api/auth/login-hmac")
+    public ResponseEntity<Map<String, Object>> loginHmac(
+            @RequestBody LoginHmacRequest request) {
+        String token = authService.loginHmac(request);
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Connexion réussie.",
+                "token", token,
+                "expiresAt", System.currentTimeMillis() + 900000  // 15 minutes
+        ));
+    }
 }

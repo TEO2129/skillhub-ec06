@@ -236,4 +236,47 @@ public class AuthService {
         String emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
         return Pattern.compile(emailRegex).matcher(email).matches();
     }
+
+    public String loginHmac(LoginHmacRequest request) {
+        String email = request.getEmail();
+        String nonce = request.getNonce();
+        long timestamp = request.getTimestamp();
+        String hmac = request.getHmac();
+
+        // 1. Vérifier email existe
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AuthenticationFailedException("Identifiants invalides."));
+
+        // 2. Vérifier timestamp (±60 secondes)
+        long now = System.currentTimeMillis();
+        if (Math.abs(now - timestamp) > 60000) {
+            throw new AuthenticationFailedException("Timestamp invalide.");
+        }
+
+        // 3. Vérifier anti-rejeu
+        if (nonceRepository.findByNonce(nonce).isPresent()) {
+            throw new AuthenticationFailedException("Nonce déjà utilisé.");
+        }
+
+        // 4. Récupérer mot de passe (chiffré réversible)
+        String passwordPlain = decryptPassword(user.getPassword());
+
+        // 5. Recalculer HMAC
+        String message = email + ":" + nonce + ":" + timestamp;
+        String expectedHmac = HmacService.calculateHmac(message, passwordPlain);
+
+        // 6. Comparer en temps constant
+        if (!HmacService.constantTimeEquals(hmac, expectedHmac)) {
+            throw new AuthenticationFailedException("Signature invalide.");
+        }
+
+        // 7. Marquer nonce comme consommé
+        Nonce nonceEntity = new Nonce(user.getId(), nonce, LocalDateTime.now().plusMinutes(2));
+        nonceRepository.save(nonceEntity);
+
+        // 8. Générer JWT
+        String token = jwtUtil.generateToken(email);
+        logger.info("Connexion HMAC réussie pour : {}", email);
+        return token;
+    }
 }
