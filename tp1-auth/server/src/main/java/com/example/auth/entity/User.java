@@ -4,96 +4,47 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
- * ============================================================
- * ENTITÉ UTILISATEUR - TP1
- * ============================================================
- *
- * Cette classe représente un utilisateur dans la base de données.
- *
- * ⚠️ ATTENTION TP1 : VOLONTAIREMENT DANGEREUX !
- * - Le mot de passe est stocké en CLAIR (non hashé)
- * - Pas de politique de mot de passe forte
- * - Token de session stocké en base (non signé)
- *
- * Cette implémentation NE DOIT JAMAIS être utilisée en production.
- *
- * @see jakarta.persistence.Entity
- * @see jakarta.persistence.Table
+ * ENTITÉ UTILISATEUR - TP2 (Étape 1)
+ * Ajout des champs pour l'anti-brute force
  */
-@Entity                           // Indique que cette classe est une entité JPA
-@Table(name = "users")           // Nom de la table en base de données
+@Entity
+@Table(name = "users")
 public class User {
 
-    // =========================================================
-    // CHAMPS DE L'ENTITÉ
-    // =========================================================
-
-    /**
-     * Identifiant unique auto-généré.
-     * Stratégie IDENTITY = auto-incrémenté par la base.
-     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * Email de l'utilisateur.
-     * - unique = true : deux utilisateurs ne peuvent pas avoir le même email
-     * - nullable = false : l'email est obligatoire
-     */
     @Column(unique = true, nullable = false)
     private String email;
 
-    /**
-     * ⚠️ TP1 : Mot de passe en CLAIR !
-     * VOLONTAIREMENT DANGEREUX - Ne jamais faire ça en production.
-     *
-     * Normalement, on stockerait un hash (BCrypt, Argon2, etc.)
-     * Mais ici, c'est intentionnel pour montrer les risques.
-     */
     @Column(name = "password", nullable = false)
     private String password;
 
-    /**
-     * Date de création du compte.
-     * Initialisée automatiquement à la création.
-     */
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    /**
-     * Token de session simple (non signé, non sécurisé).
-     * Stocké en base pour vérifier l'authentification.
-     * ⚠️ TP1 : Simple, pas de JWT, pas de signature.
-     */
     @Column(name = "session_token")
     private String sessionToken;
 
-    // =========================================================
-    // CONSTRUCTEURS
-    // =========================================================
+    // NOUVEAU TP2 : Champs pour l'anti-brute force
+    @Column(name = "failed_attempts")
+    private int failedAttempts = 0;
 
-    /**
-     * Constructeur par défaut (requis par JPA).
-     */
+    @Column(name = "lock_until")
+    private LocalDateTime lockUntil;
+
     public User() {}
 
-    /**
-     * Constructeur pour créer un nouvel utilisateur.
-     *
-     * @param email    l'email de l'utilisateur
-     * @param password le mot de passe (stocké en clair)
-     */
     public User(String email, String password) {
         this.email = email;
         this.password = password;
-        this.createdAt = LocalDateTime.now();  // Date actuelle
+        this.createdAt = LocalDateTime.now();
+        this.failedAttempts = 0;
+        this.lockUntil = null;
     }
 
-    // =========================================================
-    // GETTERS ET SETTERS
-    // =========================================================
-
+    // Getters & Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -109,16 +60,20 @@ public class User {
     public String getSessionToken() { return sessionToken; }
     public void setSessionToken(String sessionToken) { this.sessionToken = sessionToken; }
 
-    // =========================================================
-    // MÉTHODES UTILITAIRES
-    // =========================================================
+    // NOUVEAU TP2 : Getters/Setters anti-brute force
+    public int getFailedAttempts() { return failedAttempts; }
+    public void setFailedAttempts(int failedAttempts) { this.failedAttempts = failedAttempts; }
 
-    /**
-     * Représentation textuelle de l'utilisateur.
-     * Utilisé pour les logs.
-     */
+    public LocalDateTime getLockUntil() { return lockUntil; }
+    public void setLockUntil(LocalDateTime lockUntil) { this.lockUntil = lockUntil; }
+
+    // NOUVEAU TP2 : Vérification du verrouillage
+    public boolean isLocked() {
+        return lockUntil != null && LocalDateTime.now().isBefore(lockUntil);
+    }
+
     @Override
     public String toString() {
-        return "User{id=" + id + ", email='" + email + "'}";
+        return "User{id=" + id + ", email='" + email + "', locked=" + isLocked() + "}";
     }
 }
