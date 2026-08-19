@@ -2,12 +2,21 @@ package com.example.auth;
 
 import com.example.auth.crypto.AesGcmUtil;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.context.ActiveProfiles;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * TESTS DE LA MASTER KEY - TP4
+ *
+ * Teste le chiffrement et déchiffrement AES GCM avec Master Key.
+ * La clé de test doit faire exactement 32 caractères (256 bits).
+ */
+@ActiveProfiles("test")
 public class AesGcmUtilTest {
 
-    private static final String TEST_KEY = "test_master_key_256bits_long_enough12345678";
+    // ✅ 32 caractères exactement (256 bits)
+    private static final String TEST_KEY = "12345678901234567890123456789012";
 
     @Test
     void testEncryptDecrypt_OK() {
@@ -39,7 +48,7 @@ public class AesGcmUtilTest {
 
     @Test
     void testIsValidMasterKey_OK() {
-        assertTrue(AesGcmUtil.isValidMasterKey("12345678901234567890123456789012")); // 32 chars
+        assertTrue(AesGcmUtil.isValidMasterKey("12345678901234567890123456789012"));
         assertFalse(AesGcmUtil.isValidMasterKey("short"));
         assertFalse(AesGcmUtil.isValidMasterKey(null));
     }
