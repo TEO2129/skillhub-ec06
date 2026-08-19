@@ -31,6 +31,24 @@ L'objectif est de comprendre les risques d'une authentification mal conçue.
 4. **Token simple non signé** - Facilement prévisible ou falsifiable
 5. **Pas de TLS/HTTPS** - Les identifiants circulent en clair sur le réseau
 
+
+## TP2 - Authentification Fragile
+
+### Nouvelles fonctionnalités
+- ✅ Mots de passe hashés avec **BCrypt**
+- ✅ Politique de mot de passe : 12 caractères, maj/min/chiffre/spécial
+- ✅ Anti-brute force : 5 échecs → 2 minutes de blocage
+- ✅ Tests unitaires (16 tests)
+- ✅ SonarCloud configuré
+
+### Tags
+- `v2.1-db-migration` : Migration base de données
+- `v2.2-password-policy` : Politique mot de passe
+- `v2.3-hashing` : BCrypt
+- `v2.4-lockout` : Anti-brute force
+- `v2.6-sonarcloud` : SonarCloud
+- `v2-tp2` : TP2 finalisé
+
 ## Installation
 
 ```bash
