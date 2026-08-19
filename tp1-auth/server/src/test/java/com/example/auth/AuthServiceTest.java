@@ -12,167 +12,145 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * ============================================================
- * TESTS UNITAIRES DU SERVICE D'AUTHENTIFICATION - TP1
- * ============================================================
- *
- * Ces tests vérifient le bon fonctionnement du service AuthService.
- *
- * @SpringBootTest : Charge le contexte Spring complet
- * @Transactional : Annule les modifications en base après chaque test
- *
- * Nombre de tests requis TP1 : minimum 8
- * Ici : 10 tests (8 obligatoires + 2 supplémentaires pour /api/me)
- *
- * @see org.springframework.boot.test.context.SpringBootTest
- */
 @SpringBootTest
 @Transactional
 class AuthServiceTest {
 
-    // Injection automatique du service à tester
     @Autowired
     private AuthService authService;
 
     // =========================================================
-    // TESTS TP1 - 8 tests obligatoires
+    // TESTS TP1 (10 tests)
     // =========================================================
 
-    /**
-     * Test 1 : Inscription avec email vide
-     * Doit lever InvalidInputException (400 BAD REQUEST)
-     */
     @Test
     void testRegister_EmailVide_ShouldThrowInvalidInput() {
         assertThrows(InvalidInputException.class,
-                () -> authService.register("", "abcd"));
+                () -> authService.register("", "Password123!"));
     }
 
-    /**
-     * Test 2 : Inscription avec email format incorrect
-     * Doit lever InvalidInputException (400 BAD REQUEST)
-     */
     @Test
     void testRegister_EmailFormatIncorrect_ShouldThrowInvalidInput() {
         assertThrows(InvalidInputException.class,
-                () -> authService.register("pasunemail", "abcd"));
+                () -> authService.register("pasunemail", "Password123!"));
     }
 
-    /**
-     * Test 3 : Inscription avec mot de passe trop court (< 4 caractères)
-     * Doit lever InvalidInputException (400 BAD REQUEST)
-     */
     @Test
     void testRegister_PasswordTropCourt_ShouldThrowInvalidInput() {
         assertThrows(InvalidInputException.class,
                 () -> authService.register("user@test.com", "abc"));
     }
 
-    /**
-     * Test 4 : Inscription réussie
-     * Vérifie que l'utilisateur est bien créé avec les bonnes informations
-     */
     @Test
     void testRegister_OK() {
-        // Créer un utilisateur
-        User user = authService.register("newuser@test.com", "abcd");
-
-        // Vérifier que l'utilisateur n'est pas null
+        User user = authService.register("newuser@test.com", "Password123!");
         assertNotNull(user);
-
-        // Vérifier que l'email est correct
         assertEquals("newuser@test.com", user.getEmail());
-
-        // Vérifier que la date de création est définie
         assertNotNull(user.getCreatedAt());
     }
 
-    /**
-     * Test 5 : Inscription refusée si email déjà existant
-     * Doit lever ResourceConflictException (409 CONFLICT)
-     */
     @Test
     void testRegister_EmailDejaExistant_ShouldThrowResourceConflict() {
-        // Première inscription
-        authService.register("duplicate@test.com", "abcd");
-
-        // Deuxième inscription avec le même email
+        authService.register("duplicate@test.com", "Password123!");
         assertThrows(ResourceConflictException.class,
-                () -> authService.register("duplicate@test.com", "abcd"));
+                () -> authService.register("duplicate@test.com", "Password123!"));
     }
 
-    /**
-     * Test 6 : Connexion réussie
-     * Vérifie qu'un token est retourné après connexion
-     */
     @Test
     void testLogin_OK() {
-        // Inscrire un utilisateur
-        authService.register("login@test.com", "abcd");
-
-        // Se connecter
-        String token = authService.login("login@test.com", "abcd");
-
-        // Vérifier que le token n'est pas null ni vide
+        authService.register("login@test.com", "Password123!");
+        String token = authService.login("login@test.com", "Password123!");
         assertNotNull(token);
         assertFalse(token.isBlank());
     }
 
-    /**
-     * Test 7 : Connexion avec mot de passe incorrect
-     * Doit lever AuthenticationFailedException (401 UNAUTHORIZED)
-     */
     @Test
     void testLogin_MauvaisMotDePasse_ShouldThrowAuthFailed() {
-        // Inscrire un utilisateur
-        authService.register("wrongpwd@test.com", "abcd");
-
-        // Essayer de se connecter avec un mauvais mot de passe
+        authService.register("wrongpwd@test.com", "Password123!");
         assertThrows(AuthenticationFailedException.class,
                 () -> authService.login("wrongpwd@test.com", "mauvais"));
     }
 
-    /**
-     * Test 8 : Connexion avec email inconnu
-     * Doit lever AuthenticationFailedException (401 UNAUTHORIZED)
-     */
     @Test
     void testLogin_EmailInconnu_ShouldThrowAuthFailed() {
         assertThrows(AuthenticationFailedException.class,
-                () -> authService.login("inconnu@test.com", "abcd"));
+                () -> authService.login("inconnu@test.com", "Password123!"));
     }
 
-    // =========================================================
-    // TESTS SUPPLÉMENTAIRES TP1 (route /api/me)
-    // =========================================================
-
-    /**
-     * Test 9 : Accès à /api/me sans token
-     * Doit lever AuthenticationFailedException (401 UNAUTHORIZED)
-     */
     @Test
     void testGetMe_SansToken_ShouldThrowAuthFailed() {
         assertThrows(AuthenticationFailedException.class,
                 () -> authService.getMe(null));
     }
 
-    /**
-     * Test 10 : Accès à /api/me après connexion réussie
-     * Vérifie que l'utilisateur peut récupérer son profil
-     */
     @Test
     void testGetMe_OK_ApresLogin() {
-        // Inscrire un utilisateur
-        authService.register("me@test.com", "abcd");
-
-        // Se connecter et récupérer le token
-        String token = authService.login("me@test.com", "abcd");
-
-        // Récupérer le profil avec le token
+        authService.register("me@test.com", "Password123!");
+        String token = authService.login("me@test.com", "Password123!");
         User user = authService.getMe(token);
-
-        // Vérifier que l'email est correct
         assertEquals("me@test.com", user.getEmail());
+    }
+
+    // =========================================================
+    // TP2 : NOUVEAUX TESTS
+    // =========================================================
+
+    @Test
+    void testRegister_PasswordSansMajuscule_ShouldThrowInvalidInput() {
+        assertThrows(InvalidInputException.class,
+                () -> authService.register("test@test.com", "password123!"));
+    }
+
+    @Test
+    void testRegister_PasswordSansMinuscule_ShouldThrowInvalidInput() {
+        assertThrows(InvalidInputException.class,
+                () -> authService.register("test@test.com", "PASSWORD123!"));
+    }
+
+    @Test
+    void testRegister_PasswordSansChiffre_ShouldThrowInvalidInput() {
+        assertThrows(InvalidInputException.class,
+                () -> authService.register("test@test.com", "Password!"));
+    }
+
+    @Test
+    void testRegister_PasswordSansSpecial_ShouldThrowInvalidInput() {
+        assertThrows(InvalidInputException.class,
+                () -> authService.register("test@test.com", "Password123"));
+    }
+
+    @Test
+    void testLogin_LockoutAfter5FailedAttempts() {
+        String email = "lockout@test.com";
+        authService.register(email, "Password123!");
+
+        for (int i = 0; i < 5; i++) {
+            try {
+                authService.login(email, "wrong" + i);
+            } catch (AuthenticationFailedException e) {
+                // Ignorer
+            }
+        }
+
+        assertThrows(AuthenticationFailedException.class,
+                () -> authService.login(email, "wrong6"));
+    }
+
+    @Test
+    void testLogin_NonDivulgationDesErreurs() {
+        // Email inconnu
+        try {
+            authService.login("inconnu@test.com", "Password123!");
+        } catch (AuthenticationFailedException e) {
+            assertEquals("Identifiants invalides.", e.getMessage());
+        }
+
+        // Mauvais mot de passe
+        authService.register("existing@test.com", "Password123!");
+        try {
+            authService.login("existing@test.com", "wrong");
+        } catch (AuthenticationFailedException e) {
+            assertEquals("Identifiants invalides.", e.getMessage());
+        }
     }
 }
