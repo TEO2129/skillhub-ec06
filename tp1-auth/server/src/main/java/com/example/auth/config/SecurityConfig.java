@@ -5,6 +5,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 /**
  * ============================================================
@@ -19,7 +21,7 @@ import org.springframework.security.web.SecurityFilterChain;
  * - Pas de sécurité ajoutée par Spring
  *
  *  TP1 : C'est volontairement dangereux
- *  TP2/TP3/TP4 : On ajoutera BCrypt, JWT, etc.
+ *  TP2/TP3/TP4 : On ajoute BCrypt, JWT, etc.
  *
  * @see org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
  */
@@ -50,7 +52,12 @@ public class SecurityConfig {
         return http.build();
     }
 
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
     // TP1 : PAS de PasswordEncoder
     // Le mot de passe est stocké et comparé en clair
-    // Cela sera ajouté en TP2 avec BCryptPasswordEncoder
+    // Cela est ajouté en TP2 avec BCryptPasswordEncoder
 }
