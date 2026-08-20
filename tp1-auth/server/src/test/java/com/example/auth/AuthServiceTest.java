@@ -33,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * @see com.example.auth.service.AuthService
  */
 @SpringBootTest
-@ActiveProfiles("test")  // Active le profil test pour la Master Key
+@ActiveProfiles("test")
 @Transactional
 class AuthServiceTest {
 

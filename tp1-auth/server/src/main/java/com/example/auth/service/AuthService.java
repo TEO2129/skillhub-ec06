@@ -11,6 +11,7 @@ import com.example.auth.repository.NonceRepository;
 import com.example.auth.repository.UserRepository;
 import com.example.auth.security.JwtUtil;
 import com.example.auth.validator.PasswordPolicyValidator;
+import com.example.auth.config.MasterKeyConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;

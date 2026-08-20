@@ -8,25 +8,31 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
 
-/**
- * TP4 - Chiffrement AES GCM avec Master Key.
- * Format de stockage : "v1:Base64(iv):Base64(ciphertext)"
- */
 public class AesGcmUtil {
 
     private static final String ALGORITHM = "AES/GCM/NoPadding";
-    private static final int GCM_TAG_LENGTH = 128; // bits
-    private static final int IV_LENGTH = 12; // bytes (96 bits)
+    private static final int GCM_TAG_LENGTH = 128;
+    private static final int IV_LENGTH = 12;
     private static final String VERSION = "v1";
 
-    /**
-     * Chiffre un texte en clair avec une clé Master Key.
-     *
-     * @param plainText le texte à chiffrer
-     * @param masterKey la clé maître (256 bits)
-     * @return format "v1:Base64(iv):Base64(ciphertext)"
-     */
+    // ✅ VALIDATION DE LA CLÉ (au début des méthodes)
+    private static void validateMasterKey(String masterKey) {
+        if (masterKey == null) {
+            throw new IllegalArgumentException("La Master Key ne peut pas être null.");
+        }
+        int length = masterKey.getBytes(StandardCharsets.UTF_8).length;
+        // AES supporte 16, 24 ou 32 bytes
+        if (length != 16 && length != 24 && length != 32) {
+            throw new IllegalArgumentException(
+                    "La Master Key doit faire 16, 24 ou 32 bytes. Longueur actuelle : " + length + " bytes."
+            );
+        }
+    }
+
     public static String encrypt(String plainText, String masterKey) {
+        // ✅ Validation au début
+        validateMasterKey(masterKey);
+
         try {
             byte[] keyBytes = masterKey.getBytes(StandardCharsets.UTF_8);
             SecretKey secretKey = new SecretKeySpec(keyBytes, "AES");
@@ -50,19 +56,14 @@ public class AesGcmUtil {
         }
     }
 
-    /**
-     * Déchiffre un texte chiffré avec une clé Master Key.
-     *
-     * @param encryptedData format "v1:Base64(iv):Base64(ciphertext)"
-     * @param masterKey la clé maître (256 bits)
-     * @return le texte en clair
-     */
     public static String decrypt(String encryptedData, String masterKey) {
+        // ✅ Validation au début
+        validateMasterKey(masterKey);
+
         try {
-            // Parser le format
             String[] parts = encryptedData.split(":");
             if (parts.length != 3 || !parts[0].equals(VERSION)) {
-                throw new IllegalArgumentException("Format de données chiffrées invalide");
+                throw new IllegalArgumentException("Format de donnees chiffrees invalide");
             }
 
             byte[] iv = Base64.getDecoder().decode(parts[1]);
@@ -78,15 +79,13 @@ public class AesGcmUtil {
             byte[] plaintext = cipher.doFinal(ciphertext);
             return new String(plaintext, StandardCharsets.UTF_8);
         } catch (Exception e) {
-            throw new RuntimeException("Erreur de déchiffrement AES GCM - Données corrompues ou mauvaise clé", e);
+            throw new RuntimeException("Erreur de dechiffrement AES GCM", e);
         }
     }
 
-    /**
-     * Vérifie si la Master Key est valide (256 bits).
-     */
     public static boolean isValidMasterKey(String masterKey) {
-        if (masterKey == null || masterKey.isEmpty()) return false;
-        return masterKey.getBytes(StandardCharsets.UTF_8).length >= 32; // 256 bits
+        if (masterKey == null) return false;
+        int length = masterKey.getBytes(StandardCharsets.UTF_8).length;
+        return length == 16 || length == 24 || length == 32;
     }
 }

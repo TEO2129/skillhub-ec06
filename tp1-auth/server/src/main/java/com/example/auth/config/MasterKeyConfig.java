@@ -6,10 +6,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * TP4 - Configuration de la Master Key.
- * L'application refuse de démarrer si APP_MASTER_KEY est absente.
- */
 @Configuration
 public class MasterKeyConfig {
 
@@ -21,15 +17,10 @@ public class MasterKeyConfig {
     @PostConstruct
     public void validateMasterKey() {
         if (masterKey == null || masterKey.isEmpty()) {
-            logger.error("❌ APP_MASTER_KEY non définie ! L'application ne peut pas démarrer.");
-            throw new IllegalStateException(
-                    "APP_MASTER_KEY est obligatoire. Définissez-la en variable d'environnement."
-            );
+            logger.error("APP_MASTER_KEY non definie !");
+            throw new IllegalStateException("APP_MASTER_KEY est obligatoire.");
         }
-        if (masterKey.length() < 32) {
-            logger.warn("⚠️ APP_MASTER_KEY fait moins de 32 caractères (recommandé : 256 bits)");
-        }
-        logger.info("✅ Master Key configurée (longueur : {} caractères)", masterKey.length());
+        logger.info("Master Key configuree (longueur : {})", masterKey.length());
     }
 
     public String getMasterKey() {

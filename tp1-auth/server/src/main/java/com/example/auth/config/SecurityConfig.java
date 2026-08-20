@@ -11,15 +11,15 @@ import org.springframework.security.web.SecurityFilterChain;
  * CONFIGURATION DE SÉCURITÉ SPRING - TP1
  * ============================================================
  *
- * ⚠️ TP1 : Cette configuration désactive COMPLÈTEMENT Spring Security.
+ *  TP1 : Cette configuration désactive COMPLÈTEMENT Spring Security.
  *
  * Pourquoi ?
  * - Notre logique d'authentification est dans AuthService
  * - On veut que tous les endpoints soient accessibles
  * - Pas de sécurité ajoutée par Spring
  *
- * ✅ TP1 : C'est volontairement dangereux
- * ❌ TP2/TP3/TP4 : On ajoutera BCrypt, JWT, etc.
+ *  TP1 : C'est volontairement dangereux
+ *  TP2/TP3/TP4 : On ajoutera BCrypt, JWT, etc.
  *
  * @see org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
  */
@@ -42,7 +42,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
 
                 // Autorise toutes les requêtes sans authentification
-                // ⚠️ TP1 : Aucune protection !
+                // TP1 : Aucune protection !
                 .authorizeHttpRequests(auth -> auth
                         .anyRequest().permitAll()
                 );
@@ -50,7 +50,7 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // ⚠️ TP1 : PAS de PasswordEncoder
+    // TP1 : PAS de PasswordEncoder
     // Le mot de passe est stocké et comparé en clair
     // Cela sera ajouté en TP2 avec BCryptPasswordEncoder
 }
